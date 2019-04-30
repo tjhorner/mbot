@@ -11,6 +11,12 @@ import (
 )
 
 func main() {
+	subcommands.Register(subcommands.HelpCommand(), "")
+	subcommands.Register(subcommands.FlagsCommand(), "")
+	subcommands.Register(subcommands.CommandsCommand(), "")
+
+	subcommands.Register(&resumeCmd{}, "")
+	subcommands.Register(&pauseCmd{}, "")
 	subcommands.Register(&timelapseCmd{}, "")
 	subcommands.Register(&statusCmd{}, "")
 	subcommands.Register(&listCmd{}, "")

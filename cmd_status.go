@@ -23,6 +23,11 @@ func (*statusCmd) Usage() string {
 func (p *statusCmd) SetFlags(f *flag.FlagSet) {}
 
 func (p *statusCmd) Execute(c context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
+	if f.NArg() == 0 {
+		fmt.Println("Please provide the name or ID of the printer to get the status for.")
+		return subcommands.ExitUsageError
+	}
+
 	client := args[0].(*api.Client)
 
 	pid := f.Args()[0]

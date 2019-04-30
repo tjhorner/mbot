@@ -32,6 +32,11 @@ func (p *timelapseCmd) SetFlags(f *flag.FlagSet) {
 }
 
 func (p *timelapseCmd) Execute(c context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
+	if f.NArg() <= 1 {
+		fmt.Println("Please provide the name or ID of the printer to print to as well as the path to the .makerbot file.")
+		return subcommands.ExitUsageError
+	}
+
 	client := args[0].(*api.Client)
 
 	pid := f.Args()[0]
