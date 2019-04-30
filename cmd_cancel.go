@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/subcommands"
+	"github.com/tjhorner/makerbotd/api"
 )
 
 type cancelCmd struct{}
@@ -20,12 +21,12 @@ func (*cancelCmd) Usage() string {
 
 func (p *cancelCmd) SetFlags(f *flag.FlagSet) {}
 
-func (p *cancelCmd) Execute(c context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	ctx := c.(mbotCtx)
+func (p *cancelCmd) Execute(c context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
+	client := args[0].(*api.Client)
 
 	pid := f.Args()[0]
 
-	_, err := ctx.Client.CancelCurrentJob(pid)
+	_, err := client.CancelCurrentJob(pid)
 	if err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure

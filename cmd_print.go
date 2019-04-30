@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 
+	"github.com/tjhorner/makerbotd/api"
+
 	"github.com/google/subcommands"
 )
 
@@ -20,15 +22,15 @@ func (*printCmd) Usage() string {
 
 func (p *printCmd) SetFlags(f *flag.FlagSet) {}
 
-func (p *printCmd) Execute(c context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	ctx := c.(mbotCtx)
+func (p *printCmd) Execute(c context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
+	client := args[0].(*api.Client)
 
 	pid := f.Args()[0]
 	path := f.Args()[1]
 
 	fmt.Println("Sending print file...")
 
-	_, err := ctx.Client.Print(pid, path)
+	_, err := client.Print(pid, path)
 	if err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure

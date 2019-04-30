@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"os"
 
@@ -10,7 +11,8 @@ import (
 )
 
 func main() {
-	subcommands.Register(&jobCmd{}, "")
+	subcommands.Register(&timelapseCmd{}, "")
+	subcommands.Register(&statusCmd{}, "")
 	subcommands.Register(&listCmd{}, "")
 	subcommands.Register(&snapshotCmd{}, "")
 	subcommands.Register(&infoCmd{}, "")
@@ -25,6 +27,6 @@ func main() {
 
 	client := api.NewClientSocket(sockPath)
 
-	ctx := mbotCtx{client}
-	os.Exit(int(subcommands.Execute(ctx)))
+	ctx := context.Background()
+	os.Exit(int(subcommands.Execute(ctx, client)))
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/google/subcommands"
+	"github.com/tjhorner/makerbotd/api"
 )
 
 type listCmd struct{}
@@ -20,10 +21,10 @@ func (*listCmd) Usage() string {
 
 func (p *listCmd) SetFlags(f *flag.FlagSet) {}
 
-func (p *listCmd) Execute(c context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	ctx := c.(mbotCtx)
+func (p *listCmd) Execute(c context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
+	client := args[0].(*api.Client)
 
-	printers, err := ctx.Client.GetPrinters()
+	printers, err := client.GetPrinters()
 	if err != nil {
 		fmt.Println(err)
 		return subcommands.ExitFailure
