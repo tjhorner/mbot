@@ -5,7 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tjhorner/makerbot-rpc"
@@ -17,18 +21,28 @@ import (
 
 type timelapseCmd struct {
 	interval int
+	fps      int
+	outFile  string
 }
 
 func (*timelapseCmd) Name() string     { return "timelapse" }
 func (*timelapseCmd) Synopsis() string { return "Record a time lapse of a printed object." }
 func (*timelapseCmd) Usage() string {
-	return `timelapse [--interval seconds] <printer> <filepath>:
+	return `timelapse [--interval seconds] [--fps fps] [-o outfile] <printer> <filepath>:
   Record a time lapse of a printed object.
 `
 }
 
 func (p *timelapseCmd) SetFlags(f *flag.FlagSet) {
+	var wd string
+	wd, err := os.Getwd()
+	if err != nil {
+		wd = "/tmp"
+	}
+
 	f.IntVar(&p.interval, "interval", 5, "how often a snapshot should be taken, in seconds")
+	f.IntVar(&p.fps, "fps", 20, "the fps of the final timelapse")
+	f.StringVar(&p.outFile, "o", fmt.Sprintf("%s/timelapse_%d.mp4", wd, time.Now().Unix()), "output video file")
 }
 
 func (p *timelapseCmd) Execute(c context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
@@ -39,8 +53,8 @@ func (p *timelapseCmd) Execute(c context.Context, f *flag.FlagSet, args ...inter
 
 	client := args[0].(*api.Client)
 
-	pid := f.Args()[0]
-	path := f.Args()[1]
+	pid := f.Arg(0)
+	path := f.Arg(1)
 
 	fmt.Println("Sending print file...")
 
@@ -103,11 +117,28 @@ func (p *timelapseCmd) Execute(c context.Context, f *flag.FlagSet, args ...inter
 		time.Sleep(time.Duration(p.interval) * time.Second)
 	}
 
-	fmt.Println("Time lapse completed! I didn't actually add the necessary code to compile all the screenshots, but you can do this to make an mp4 yourself if you have ffmpeg installed:")
+	// invoke ffmpeg (I am too lazy to use libav)
+	fmt.Println("Print is done! Compiling snapshots into mp4 file using ffmpeg...")
 
-	fmt.Printf("\n  cd %s && ffmpeg -r 5 -pattern_type glob -i '*.jpg' -c:v libx264 -r 30 -pix_fmt yuv420p out.mp4\n\n", td)
+	ffmpegArgs := []string{"-r", strconv.Itoa(p.fps), "-pattern_type", "glob", "-i", "*.jpg", "-c:v", "libx264", "-r", strconv.Itoa(p.fps), "-pix_fmt", "yuv420p", p.outFile}
+	cmd := exec.Command("ffmpeg", ffmpegArgs...)
 
-	fmt.Println("Then you'll have out.mp4 in that directory. Ta-da.")
+	cmd.Dir = td
+
+	err = cmd.Run()
+	if err != nil {
+		fullCmd := fmt.Sprintf("ffmpeg %s", strings.Join(ffmpegArgs, " "))
+		fmt.Printf("Couldn't convert to mp4. Do you have ffmpeg installed? If you do, run this command inside of %s:\n\n    %s", td, fullCmd)
+		fmt.Println("\nIf you don't have ffmpeg installed, you can grab it here: https://ffmpeg.org")
+		return subcommands.ExitSuccess
+	}
+
+	fmt.Printf("Time lapse completed! Saved to: %s\n", p.outFile)
+
+	err = os.RemoveAll(td)
+	if err != nil {
+		fmt.Printf("warn: could not remove tmp directory; you can try deleting it yourself: %s", td)
+	}
 
 	return subcommands.ExitSuccess
 }

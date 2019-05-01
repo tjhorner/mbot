@@ -6,8 +6,6 @@ mbot is a command-line interface for [makerbotd](https://github.com/tjhorner/mak
 
 ## Usage
 
-If your makerbotd listens on a different path, you can provide it with `MBOT_SOCKET_PATH`. TCP HTTP connections not currently supported.
-
 ```
 Usage: mbot <flags> <subcommand> <subcommand args>
 
@@ -22,6 +20,11 @@ Subcommands:
 	status           Get the current job that a printer is running.
 	timelapse        Record a time lapse of a printed object.
 ```
+
+## Environment Variables
+
+- `MBOT_PROTOCOL`: Either `unix` or `tcp` (default: `unix`)
+- `MBOT_HOST`: Either the path to where the UNIX socket is listening or the base URL to where the daemon is listening (e.g. `http://localhost:6969`; default: `/var/run/makerbot.sock`)
 
 ## License
 

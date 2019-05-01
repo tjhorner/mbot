@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/tjhorner/makerbotd/api"
@@ -26,12 +27,24 @@ func main() {
 	subcommands.Register(&printCmd{}, "")
 	flag.Parse()
 
-	sockPath, ok := os.LookupEnv("MBOT_SOCKET_PATH")
+	connProto, ok := os.LookupEnv("MBOT_PROTOCOL")
 	if !ok {
-		sockPath = api.DefaultUnixSocketPath
+		connProto = "unix"
 	}
 
-	client := api.NewClientSocket(sockPath)
+	connHost, ok := os.LookupEnv("MBOT_HOST")
+	if !ok {
+		connHost = api.DefaultUnixSocketPath
+	}
+
+	var client *api.Client
+	if connProto == "tcp" {
+		client = api.NewClientTCP(connHost)
+	} else if connProto == "unix" {
+		client = api.NewClientSocket(connHost)
+	} else {
+		panic(fmt.Errorf("invalid MBOT_PROTOCOL (got: %s, wanted: unix or tcp)", connProto))
+	}
 
 	ctx := context.Background()
 	os.Exit(int(subcommands.Execute(ctx, client)))
