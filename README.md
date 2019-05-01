@@ -2,7 +2,11 @@
 
 mbot is a command-line interface for [makerbotd](https://github.com/tjhorner/makerbotd). You can control your MakerBot 3D printers with it.
 
+**This software is mid-development. It is not stable yet.** That said, feel free to play around with it!
+
 ## Usage
+
+If your makerbotd listens on a different path, you can provide it with `MBOT_SOCKET_PATH`. TCP HTTP connections not currently supported.
 
 ```
 Usage: mbot <flags> <subcommand> <subcommand args>
