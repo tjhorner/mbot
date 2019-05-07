@@ -28,7 +28,7 @@ type timelapseCmd struct {
 func (*timelapseCmd) Name() string     { return "timelapse" }
 func (*timelapseCmd) Synopsis() string { return "Record a time lapse of a printed object." }
 func (*timelapseCmd) Usage() string {
-	return `timelapse [--interval seconds] [--fps fps] [-o outfile] <printer> <filepath>:
+	return `timelapse [--interval seconds] [--fps fps] [-o outfile] <printer> [printfile]:
   Record a time lapse of a printed object.
 `
 }
@@ -46,40 +46,54 @@ func (p *timelapseCmd) SetFlags(f *flag.FlagSet) {
 }
 
 func (p *timelapseCmd) Execute(c context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
-	if f.NArg() <= 1 {
-		fmt.Println("Please provide the name or ID of the printer to print to as well as the path to the .makerbot file.")
+	if f.NArg() == 0 {
+		fmt.Println("Please provide the name or ID of the printer to record a time lapse of.")
 		return subcommands.ExitUsageError
 	}
 
 	client := args[0].(*api.Client)
 
 	pid := f.Arg(0)
-	path := f.Arg(1)
 
-	fmt.Println("Sending print file...")
+	if f.NArg() == 2 {
+		path := f.Arg(1)
 
-	_, err := client.Print(pid, path)
-	if err != nil {
-		fmt.Println(err)
-		return subcommands.ExitFailure
-	}
+		fmt.Println("Sending print file...")
 
-	fmt.Println("Waiting for print to start...")
-
-	for {
-		status, err := client.GetCurrentJob(pid)
+		_, err := client.Print(pid, path)
 		if err != nil {
 			fmt.Println(err)
 			return subcommands.ExitFailure
 		}
 
-		if status.Step == makerbot.StepPrinting && status.Name == "PrintProcess" {
-			break
+		fmt.Println("Waiting for print to start...")
+
+		for {
+			status, err := client.GetCurrentJob(pid)
+			if err != nil {
+				fmt.Println(err)
+				return subcommands.ExitFailure
+			}
+
+			if status.Step == makerbot.StepPrinting && status.Name == "PrintProcess" {
+				break
+			}
+
+			fmt.Printf("process=%s step=%s progress=%d\n", status.Name, status.Step.String(), *status.Progress)
+
+			time.Sleep(5 * time.Second)
 		}
+	}
 
-		fmt.Printf("process=%s step=%s progress=%d\n", status.Name, status.Step.String(), *status.Progress)
+	status, err := client.GetCurrentJob(pid)
+	if err != nil {
+		fmt.Println(err)
+		return subcommands.ExitFailure
+	}
 
-		time.Sleep(5 * time.Second)
+	if status.Step != makerbot.StepPrinting {
+		fmt.Println("Printer is not currently printing anything, so there's nothing to take a time lapse of. Exiting.")
+		return subcommands.ExitSuccess
 	}
 
 	td, err := ioutil.TempDir("", "mbot_timelapse")
@@ -90,7 +104,7 @@ func (p *timelapseCmd) Execute(c context.Context, f *flag.FlagSet, args ...inter
 		return subcommands.ExitFailure
 	}
 
-	fmt.Printf("Starting the time lapse (tmpdir=%s)...\n", td)
+	fmt.Printf("Starting time lapse of file %s (tmpdir=%s)...\n", filepath.Base(*status.Filepath), td)
 
 	for {
 		status, err := client.GetCurrentJob(pid)
