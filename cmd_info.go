@@ -5,26 +5,27 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"reflect"
+	"html/template"
+	"os"
 
 	"github.com/google/subcommands"
 	"github.com/tjhorner/makerbotd/api"
 )
 
 type infoCmd struct {
-	key string
+	raw bool
 }
 
 func (*infoCmd) Name() string     { return "info" }
 func (*infoCmd) Synopsis() string { return "Get info about a printer." }
 func (*infoCmd) Usage() string {
-	return `info [-key key] <printer>:
+	return `info [--raw] <printer>:
   Get info about a printer.
 `
 }
 
 func (p *infoCmd) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&p.key, "key", "", "the info key to retrieve")
+	f.BoolVar(&p.raw, "raw", false, "if true, will output raw JSON")
 }
 
 func (p *infoCmd) Execute(c context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
@@ -43,7 +44,7 @@ func (p *infoCmd) Execute(c context.Context, f *flag.FlagSet, args ...interface{
 		return subcommands.ExitFailure
 	}
 
-	if p.key == "" {
+	if p.raw {
 		marshaled, err := json.MarshalIndent(*printer, "", "  ")
 		if err != nil {
 			fmt.Println(err)
@@ -51,10 +52,17 @@ func (p *infoCmd) Execute(c context.Context, f *flag.FlagSet, args ...interface{
 		}
 
 		fmt.Println(string(marshaled))
+	} else {
+		tmpl, _ := template.New("printerinfo").Parse(`Printer Info: {{.MachineName}}
+  - Bot Type: {{.BotType}}
+  - Serial Number: {{.Serial}}
+  - IP: {{.IP}}
+  - JSON-RPC Port: {{.Port}}
+  - Firmware Version: {{.FirmwareVersion.Major}}.{{.FirmwareVersion.Minor}}.{{.FirmwareVersion.Bugfix}} ({{.FirmwareVersion.Build}})
+`)
 
-		return subcommands.ExitSuccess
+		tmpl.Execute(os.Stdout, *printer)
 	}
 
-	fmt.Println(reflect.ValueOf(*printer).FieldByName(p.key).String())
 	return subcommands.ExitSuccess
 }
